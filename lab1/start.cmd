@@ -1,0 +1,1 @@
+"C:\Program Files\Microsoft MPI\Bin\mpiexec.exe" -n 66 C:\Users\Lena\Documents\parallelProg\lab1\x64\Debug\lab1.exe
