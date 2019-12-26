@@ -13,8 +13,7 @@ int calculate_term(int k)
 
 int main(int argc, char** argv)
 {
-	int rank, size;
-	
+	int rank, size, startTag = 0, endTag = 1, exchangeTag = 3;
 	MPI_Status status;
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -23,9 +22,8 @@ int main(int argc, char** argv)
 	while (true)
 	{
 		double sum=0, temp_sum = 0, endTime, startTime = 0.0;
-		unsigned int n = 0, workPerProc, startPoint, endPoint, shift=1;
-
-		long long tmpProcCount = size;
+		unsigned int n = 0, workPerProc, startPoint, endPoint, nproc;
+		nproc = size;
 
 		if (rank == root)
 		{
@@ -59,34 +57,40 @@ int main(int argc, char** argv)
 		}
 
 		for (int number = startPoint; number <= endPoint; number++)
-			temp_sum += calculate_term(number);
+			sum += calculate_term(number);
+		
+		MPI_Barrier(MPI_COMM_WORLD);
 
-		//MPI_Barrier(MPI_COMM_WORLD);
-		while (tmpProcCount > 0)
+		while (nproc >1)
 		{
-			if (rank % (shift * 2) != 0)
+			if (rank < nproc / 2 )
 			{
-				MPI_Send(&temp_sum, 1, MPI_DOUBLE, rank - shift, exchangeTag, MPI_COMM_WORLD);
-				cout << "SEND " << temp_sum << " from " << rank << " to: " << rank -shift << endl;
+				MPI_Recv(&temp_sum, 1, MPI_DOUBLE,nproc - rank - 1, exchangeTag, MPI_COMM_WORLD, &status);
+				sum += temp_sum;
 			}
-
-			else
+			else 
+				if (rank < nproc  && (nproc%2==0 || ((nproc % 2 == 1) && (rank != nproc / 2))))
+				MPI_Send(&sum, 1, MPI_DOUBLE, nproc - rank - 1, exchangeTag, MPI_COMM_WORLD);
+			if (!(nproc % 2 == 0))
 			{
-				if (rank + shift < size)
+				if (rank == nproc / 2)
 				{
-					MPI_Recv(&sum, 1, MPI_DOUBLE, rank + shift, exchangeTag, MPI_COMM_WORLD, &status);
-					temp_sum += sum;
-					cout <<"RECV " << sum << " for " <<rank << " from: " <<  rank + shift << " "<< temp_sum <<endl;
-
+					MPI_Send(&sum, 1, MPI_DOUBLE, root, exchangeTag, MPI_COMM_WORLD);
 				}
-				shift *= 2;
+
+				if (rank == root)
+				{
+					MPI_Recv(&temp_sum, 1, MPI_DOUBLE, nproc / 2, exchangeTag, MPI_COMM_WORLD, &status);
+					sum+= temp_sum;
+				}
+
 			}
-			tmpProcCount /=2;
+			nproc /= 2;
 		}
-		//MPI_Barrier(MPI_COMM_WORLD);
+
 		if (rank == root)
 		{
-			cout <<endl<<"Sum = "<< temp_sum<< endl << endl;
+			cout << sum<< endl;
 		}
 	}
 	MPI_Finalize();
