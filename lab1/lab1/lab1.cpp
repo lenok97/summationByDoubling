@@ -8,7 +8,7 @@ const int root = 0;
 
 int calculateTerm(int k)
 {
-	return k; 
+	return 1; 
 }
 
 int main(int argc, char** argv)
@@ -65,31 +65,27 @@ int main(int argc, char** argv)
 
 		while (groupSize >1)
 		{
-			if (rank < groupSize / 2 )
+			int pairNum = groupSize - rank - 1;
+			if (rank < groupSize / 2) // процессы, из первой половины группы, принимают элемент от своих пар из второй половины
 			{
-				MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT,groupSize - rank - 1, exchangeTag, MPI_COMM_WORLD, &status);
+				MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT, pairNum, exchangeTag, MPI_COMM_WORLD, &status);
 				sum += tempSum;
 			}
-			else 
-				if (rank < groupSize)  
-					if  (groupSize % 2 == 0 || ((groupSize % 2 == 1) && (rank != groupSize / 2)))
-						MPI_Send(&sum, 1, MPI_LONG_LONG_INT, groupSize - rank - 1, exchangeTag, MPI_COMM_WORLD);
-			
-			if (!(groupSize % 2 == 0))
+			else // вторая часть группы отправляет свой элемент
 			{
-				if (rank == groupSize / 2)
-				{
-					MPI_Send(&sum, 1, MPI_LONG_LONG_INT, root, exchangeTag, MPI_COMM_WORLD);
-				}
-
-				if (rank == root)
-				{
-					MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT, groupSize / 2, exchangeTag, MPI_COMM_WORLD, &status);
-					sum+= tempSum;
-				}
-
+				if (groupSize % 2 == 1 && rank == groupSize / 2) // непарный элемент отправляет мастеру
+					pairNum = root;
+				MPI_Send(&sum, 1, MPI_LONG_LONG_INT, pairNum, exchangeTag, MPI_COMM_WORLD);
 			}
-			groupSize /= 2;
+			if (groupSize % 2 == 1 && rank == root) // мастер принимает элемент от непарных процессов из подгруппы 
+			{
+				pairNum = groupSize / 2;
+				MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT, pairNum, exchangeTag, MPI_COMM_WORLD, &status);
+				sum += tempSum;
+			}
+			groupSize /= 2; // уменьшаем размер подгруппы в два раза
+			if (rank > groupSize)
+				break;
 		}
 
 		if (rank == root)
