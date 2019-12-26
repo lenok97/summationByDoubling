@@ -6,7 +6,7 @@ using namespace std;
 const int startTag = 0, endTag = 1, exchangeTag = 3;
 const int root = 0;
 
-int calculate_term(int k)
+int calculateTerm(int k)
 {
 	return k; 
 }
@@ -23,8 +23,8 @@ int main(int argc, char** argv)
 	while (true)
 	{
 		long n = 0, workPerProc, startPoint, endPoint;
-		long long sum = 0, temp_sum = 0;
-		int nproc = size;
+		long long sum = 0, tempSum = 0;
+		int groupSize = size;
 
 		if (rank == root)
 		{
@@ -59,37 +59,37 @@ int main(int argc, char** argv)
 		}
 
 		for (int number = startPoint; number <= endPoint; number++)
-			sum += calculate_term(number);
+			sum += calculateTerm(number);
 		
 		MPI_Barrier(MPI_COMM_WORLD);
 
-		while (nproc >1)
+		while (groupSize >1)
 		{
-			if (rank < nproc / 2 )
+			if (rank < groupSize / 2 )
 			{
-				MPI_Recv(&temp_sum, 1, MPI_LONG_LONG_INT,nproc - rank - 1, exchangeTag, MPI_COMM_WORLD, &status);
-				sum += temp_sum;
+				MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT,groupSize - rank - 1, exchangeTag, MPI_COMM_WORLD, &status);
+				sum += tempSum;
 			}
 			else 
-				if (rank < nproc)  
-					if  (nproc % 2 == 0 || ((nproc % 2 == 1) && (rank != nproc / 2)))
-						MPI_Send(&sum, 1, MPI_LONG_LONG_INT, nproc - rank - 1, exchangeTag, MPI_COMM_WORLD);
+				if (rank < groupSize)  
+					if  (groupSize % 2 == 0 || ((groupSize % 2 == 1) && (rank != groupSize / 2)))
+						MPI_Send(&sum, 1, MPI_LONG_LONG_INT, groupSize - rank - 1, exchangeTag, MPI_COMM_WORLD);
 			
-			if (!(nproc % 2 == 0))
+			if (!(groupSize % 2 == 0))
 			{
-				if (rank == nproc / 2)
+				if (rank == groupSize / 2)
 				{
 					MPI_Send(&sum, 1, MPI_LONG_LONG_INT, root, exchangeTag, MPI_COMM_WORLD);
 				}
 
 				if (rank == root)
 				{
-					MPI_Recv(&temp_sum, 1, MPI_LONG_LONG_INT, nproc / 2, exchangeTag, MPI_COMM_WORLD, &status);
-					sum+= temp_sum;
+					MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT, groupSize / 2, exchangeTag, MPI_COMM_WORLD, &status);
+					sum+= tempSum;
 				}
 
 			}
-			nproc /= 2;
+			groupSize /= 2;
 		}
 
 		if (rank == root)
