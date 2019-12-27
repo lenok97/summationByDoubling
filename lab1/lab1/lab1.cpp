@@ -8,7 +8,7 @@ const int root = 0;
 
 int calculateTerm(int k)
 {
-	return 1; 
+	return k; 
 }
 
 int main(int argc, char** argv)
@@ -70,21 +70,24 @@ int main(int argc, char** argv)
 			{
 				MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT, pairNum, exchangeTag, MPI_COMM_WORLD, &status);
 				sum += tempSum;
+				cout << rank << " from " << pairNum << endl;
 			}
 			else // вторая часть группы отправляет свой элемент
 			{
 				if (groupSize % 2 == 1 && rank == groupSize / 2) // непарный элемент отправляет мастеру
 					pairNum = root;
 				MPI_Send(&sum, 1, MPI_LONG_LONG_INT, pairNum, exchangeTag, MPI_COMM_WORLD);
+				cout << rank << " to " << pairNum << endl;
 			}
 			if (groupSize % 2 == 1 && rank == root) // мастер принимает элемент от непарных процессов из подгруппы 
 			{
 				pairNum = groupSize / 2;
 				MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT, pairNum, exchangeTag, MPI_COMM_WORLD, &status);
 				sum += tempSum;
+				cout << rank << " from " << pairNum << endl;
 			}
 			groupSize /= 2; // уменьшаем размер подгруппы в два раза
-			if (rank > groupSize)
+			if (rank > groupSize-1)
 				break;
 		}
 
