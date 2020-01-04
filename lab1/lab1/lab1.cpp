@@ -22,41 +22,33 @@ int main(int argc, char** argv)
 
 	while (true)
 	{
-		long n = 0, workPerProc, startPoint, endPoint;
+		long n = 0;
 		long long sum = 0, tempSum = 0;
 		int groupSize = size;
-
 		if (rank == root)
 		{
 			cout << "Process count = " << size << endl;
 			cout << "Enter n: ";
 			cin >> n;
 			startTime = MPI_Wtime();
-			workPerProc = n / size;
-			int rest = n % size;
-			int start = 0;
-			int end = workPerProc;
-			startPoint = start;
-			endPoint = end;
-			for (int i = 1; i < size; i++)
-			{
-				start = end + 1;
-				end = start + workPerProc - 1;
-				if (rest > 0)
-				{
-					end++;
-					rest--;
-				}
-				MPI_Send(&start, 1, MPI_INT, i, startTag, MPI_COMM_WORLD);
-				MPI_Send(&end, 1, MPI_INT, i, endTag, MPI_COMM_WORLD);
-			}
 		}
+		MPI_Bcast(&n, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 
-		if (rank != root)
+		long workPerProc = n / size;
+		long extraElement = n % size;
+		long startPoint = rank * workPerProc;
+		long endPoint = startPoint + workPerProc - 1;
+		if (rank <= extraElement)
 		{
-			MPI_Recv(&startPoint, 1, MPI_INT, root, startTag, MPI_COMM_WORLD, &status);
-			MPI_Recv(&endPoint, 1, MPI_INT, root, endTag, MPI_COMM_WORLD, &status);
+			startPoint += rank;
+			endPoint = startPoint + workPerProc;
 		}
+		else
+			if (rank > extraElement)
+			{
+				startPoint += extraElement + 1;
+				endPoint = startPoint + workPerProc - 1;
+			}
 
 		for (int number = startPoint; number <= endPoint; number++)
 			sum += calculateTerm(number);
@@ -70,21 +62,21 @@ int main(int argc, char** argv)
 			{
 				MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT, pairNum, exchangeTag, MPI_COMM_WORLD, &status);
 				sum += tempSum;
-				cout << rank << " from " << pairNum << endl;
+				//cout << rank << " from " << pairNum << endl;
 			}
 			else // вторая часть группы отправляет свой элемент
 			{
 				if (groupSize % 2 == 1 && rank == groupSize / 2) // непарный элемент отправляет мастеру
 					pairNum = root;
 				MPI_Send(&sum, 1, MPI_LONG_LONG_INT, pairNum, exchangeTag, MPI_COMM_WORLD);
-				cout << rank << " to " << pairNum << endl;
+				//cout << rank << " to " << pairNum << endl;
 			}
 			if (groupSize % 2 == 1 && rank == root) // мастер принимает элемент от непарных процессов из подгруппы 
 			{
 				pairNum = groupSize / 2;
 				MPI_Recv(&tempSum, 1, MPI_LONG_LONG_INT, pairNum, exchangeTag, MPI_COMM_WORLD, &status);
 				sum += tempSum;
-				cout << rank << " from " << pairNum << endl;
+				//cout << rank << " from " << pairNum << endl;
 			}
 			groupSize /= 2; // уменьшаем размер подгруппы в два раза
 			if (rank > groupSize-1)
