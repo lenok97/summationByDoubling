@@ -13,8 +13,8 @@ int calculateTerm(int k)
 
 int main(int argc, char** argv)
 {
-	int rank, size, startTag = 0, endTag = 1, exchangeTag = 3;
-	double endTime, startTime = 0.0;
+	int rank, size;
+	double endTime, startTime;
 	MPI_Status status;
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
